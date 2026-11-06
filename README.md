@@ -38,6 +38,38 @@ sudo ln -s /var/www/ood/apps/sys/nf-core/initializers/nf_core_dashboard_route.rb
 
 4. Restart the user NGINX app or reopen dashboard.
 
+## Where pipeline apps live
+
+Pipeline apps can be kept out of the top-level sys apps directory:
+
+```
+/var/www/ood/apps/sys/ood-nfcore-pipelines/
+├── nf-core-rnaseq-3-26-0/
+├── nf-core-rnaseq-3-27-0/
+└── nf-core-sarek-3-11-0/ ...
+```
+
+OOD itself only scans `/var/www/ood/apps/sys/<app>`. The initializer
+`initializers/nf_core_dashboard_route.rb` patches the dashboard's `SysRouter` so:
+
+- a token `sys/<app>` resolves to `/var/www/ood/apps/sys/<app>` if it exists,
+  otherwise to `/var/www/ood/apps/sys/ood-nfcore-pipelines/<app>`;
+- `SysRouter.apps` also returns the nested apps (so they show on this page,
+  in "Recently Used", and can be pinned), and drops the
+  `ood-nfcore-pipelines` container folder itself.
+
+App tokens and launch URLs are unchanged
+(`/pun/sys/dashboard/batch_connect/sys/<app>/session_contexts/new`), so moving
+an app between the two locations does not break saved form values or existing
+sessions. If an app exists in both places, the top-level copy wins.
+
+Keep `category: ""` in each pipeline `manifest.yml` so it stays out of the nav
+menus; the folder name must start with `nf-core-` to be listed on this page.
+
+Set `NF_CORE_PIPELINES_DIR` (in `/etc/ood/config/apps/dashboard/env`) to use a
+different folder. The dashboard must be restarted after adding/removing the
+initializer; adding new pipeline folders only needs a dashboard (PUN) restart.
+
 
 ## Configuration
 
@@ -45,6 +77,8 @@ Environment variables:
 
 - `NF_CORE_CATALOG`: absolute path to pipeline catalog YAML.
   - Default: `config/pipelines.yml` within the app
+- `NF_CORE_PIPELINES_DIR`: folder holding nested pipeline apps.
+  - Default: `/var/www/ood/apps/sys/ood-nfcore-pipelines`
 - `OOD_DASHBOARD_BASE`: base path to dashboard app routes.
   - Default: `/pun/sys/dashboard`
 

@@ -17,6 +17,12 @@ class NfPipelinesController < ApplicationController
         nav_sys_apps
       end
 
+    # Pipelines may also live in the nested pipelines folder
+    # (/var/www/ood/apps/sys/ood-nfcore-pipelines/<app>). The initializer
+    # patches SysRouter.apps to include them already; this is a belt-and-braces
+    # lookup so the page still finds them, de-duplicated by app name.
+    source_apps = (source_apps + nested_pipeline_apps).uniq { |app| app.router.name.to_s }
+
     apps = source_apps.select(&:batch_connect_app?).select do |app|
       app.router.name.to_s.start_with?('nf-core-')
     end
@@ -45,6 +51,17 @@ class NfPipelinesController < ApplicationController
 
       { name: subcat.downcase, pipelines: pipelines }
     end
+  end
+
+  def nested_pipeline_apps
+    return [] unless defined?(NfCorePipelines)
+
+    NfCorePipelines.app_names
+                   .map { |name| OodApp.new(SysRouter.new(name)) }
+                   .select(&:accessible?)
+  rescue StandardError => e
+    Rails.logger.warn("nf-core: failed to scan #{NfCorePipelines.base_path}: #{e.message}")
+    []
   end
 
   def parse_name(manifest_name, app_name)

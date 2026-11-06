@@ -8,6 +8,7 @@ class NfCoreHomeApp
   TEMPLATE_PATH = File.expand_path('views/index.erb', __dir__)
   DEFAULT_APPS_DIR = '/var/www/ood/apps/sys'
   DEFAULT_DASHBOARD_BASE = '/pun/sys/dashboard'
+  DEFAULT_PIPELINES_DIR = '/var/www/ood/apps/sys/ood-nfcore-pipelines'
 
   def call(env)
     req_path = env['PATH_INFO'].to_s
@@ -32,6 +33,24 @@ class NfCoreHomeApp
     ENV.fetch('NF_CORE_APPS_DIR', DEFAULT_APPS_DIR)
   end
 
+  def pipelines_dir
+    ENV.fetch('NF_CORE_PIPELINES_DIR', DEFAULT_PIPELINES_DIR)
+  end
+
+  # Manifests from the nested pipelines folder plus (legacy) top-level sys
+  # apps. Top-level wins when the same app name exists in both places,
+  # matching how the dashboard resolves "sys/<app>" tokens.
+  def manifest_paths
+    seen = {}
+    [apps_dir, pipelines_dir].each do |dir|
+      Dir.glob(File.join(dir, 'nf-core-*', 'manifest.yml')).sort.each do |path|
+        name = File.basename(File.dirname(path))
+        seen[name] ||= path
+      end
+    end
+    seen.values.sort_by { |path| File.basename(File.dirname(path)) }
+  end
+
   def load_from_manifests
     groups = discover_manifest_groups
     title = 'nf-core Pipelines'
@@ -40,7 +59,7 @@ class NfCoreHomeApp
   rescue StandardError => e
     [
       'nf-core Pipelines',
-      "Failed to discover pipeline manifests from #{apps_dir}: #{e.message}",
+      "Failed to discover pipeline manifests from #{apps_dir} / #{pipelines_dir}: #{e.message}",
       []
     ]
   end
@@ -48,7 +67,7 @@ class NfCoreHomeApp
   def discover_manifest_groups
     grouped = {}
 
-    Dir.glob(File.join(apps_dir, 'nf-core-*', 'manifest.yml')).sort.each do |manifest_path|
+    manifest_paths.each do |manifest_path|
       app_name = File.basename(File.dirname(manifest_path))
       raw = YAML.safe_load(File.read(manifest_path), aliases: true) || {}
       next unless include_manifest_app?(raw, app_name)
