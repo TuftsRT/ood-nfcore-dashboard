@@ -29,11 +29,13 @@ To use this dashboard its files needs to be linked into the proper places in the
 ```
 sudo ln -s /var/www/ood/apps/sys/nf-core/controllers/nf_pipelines_controller.rb /var/www/ood/apps/sys/dashboard/app/controllers/nf_pipelines_controller.rb
 
-mkdir -p /etc/ood/config/apps/dashboard/views/nf_pipelines/
+sudo mkdir -p /etc/ood/config/apps/dashboard/views/nf_pipelines/
 sudo ln -s /var/www/ood/apps/sys/nf-core/views/index.html.erb /etc/ood/config/apps/dashboard/views/nf_pipelines/index.html.erb
 
-mkdir -p /etc/ood/config/apps/dashboard/initializers
+sudo mkdir -p /etc/ood/config/apps/dashboard/initializers
 sudo ln -s /var/www/ood/apps/sys/nf-core/initializers/nf_core_dashboard_route.rb /etc/ood/config/apps/dashboard/initializers/nf_core_dashboard_route.rb
+sudo chmod -R 755 /etc/ood/config/apps/dashboard/views/nf_pipelines/
+sudo chmod 755 /etc/ood/config/apps/dashboard/initializers 
 ``` 
 
 4. Restart the user NGINX app or reopen dashboard.
