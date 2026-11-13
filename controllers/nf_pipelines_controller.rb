@@ -57,7 +57,7 @@ class NfPipelinesController < ApplicationController
     return [] unless defined?(NfCorePipelines)
 
     NfCorePipelines.app_names
-                   .map { |name| OodApp.new(SysRouter.new(name)) }
+                   .map { |name| NfCorePipelines.build_app(SysRouter.new(name)) }
                    .select(&:accessible?)
   rescue StandardError => e
     Rails.logger.warn("nf-core: failed to scan #{NfCorePipelines.base_path}: #{e.message}")

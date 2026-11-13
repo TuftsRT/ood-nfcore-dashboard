@@ -62,6 +62,19 @@ module NfCorePipelines
     candidate.directory? ? candidate : nil
   end
 
+  # OOD 4.x: batch connect apps must be BatchConnect::App instances, a plain
+  # OodApp returns no launch links (sub_app_list is always empty).
+  # OOD <= 3.x: BatchConnect::App is not an OodApp and a plain OodApp already
+  # builds the links, so keep using OodApp there.
+  def build_app(router)
+    app = OodApp.new(router)
+    if app.batch_connect_app? && BatchConnect::App < OodApp
+      BatchConnect::App.new(router: router)
+    else
+      app
+    end
+  end
+
   # True if +path+ is the pipelines container folder itself.
   def container?(path)
     Pathname.new(path).expand_path == base_path.expand_path
@@ -89,7 +102,7 @@ module NfCorePipelines
 
       nested = NfCorePipelines.app_names
                               .reject { |n| seen.include?(n) }
-                              .map { |n| OodApp.new(new(n)) }
+                              .map { |n| NfCorePipelines.build_app(new(n)) }
                               .select(&:accessible?)
 
       top_level + nested
